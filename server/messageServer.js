@@ -91,8 +91,6 @@ class MessageServer {
         let {room} = context;
 
         this.kurentoClient.create('MediaPipeline').then((pipeline)=> {
-            console.log("pipeline", pipeline);
-
             room.setMediaPipeline(pipeline);
             accept({});
 

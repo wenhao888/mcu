@@ -68,8 +68,10 @@ class App extends Component {
             this.onError(error);
             return;
         }
-        await this.peer.request("teacherJoin", {sdpOffer});
+        let sdpAnswer =await this.peer.request("teacherJoin", {sdpOffer});
+        this.webRtcPeer.processAnswer(sdpAnswer);
     }
+
 
     onError = (error) => {
         console.error(error);
