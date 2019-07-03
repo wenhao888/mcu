@@ -24,6 +24,7 @@ class App extends Component {
     socketMessageHandler = async (request, accept, reject)=>{
         switch(request.method) {
             case 'serverIceCandidate':
+                console.log("serverIceCandidate: ", request.data.candidate);
                 this.webRtcPeer.addIceCandidate(request.data.candidate);
                 break;
         }
@@ -60,6 +61,7 @@ class App extends Component {
     };
 
     onIceCandidate = (candidate)=>{
+        console.log("onIceCandidate", candidate);
         this.peer.request("clientIceCandidate", {candidate})
     };
 
@@ -69,6 +71,7 @@ class App extends Component {
             return;
         }
         let sdpAnswer =await this.peer.request("teacherJoin", {sdpOffer});
+        console.log("sdn answer: ", sdpAnswer);
         this.webRtcPeer.processAnswer(sdpAnswer);
     }
 

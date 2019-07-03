@@ -84,6 +84,9 @@ class MessageServer {
             case 'clientIceCandidate':
                 this.clientIceCandidateHandler(context, request, accept, reject);
                 break;
+            default:
+                console.log("unexpected method: ", method);
+                accept({});
         }
     }
 
