@@ -8,6 +8,7 @@ const protooServer = require('protoo-server');
 const dbService = require("./service/dbService");
 const UrlPattern = require('url-pattern');
 const Room = require("./model/Room");
+const kurento = require('kurento-client');
 const kurentoUtil = require("./util/kurentoUtil");
 
 const options =
@@ -24,7 +25,7 @@ class MessageServer {
     async start(rawHttpServer, kurentoUrl) {
         const server = new protooServer.WebSocketServer(rawHttpServer, options);
         server.on('connectionrequest', this.newConnectionHandler.bind(this));
-        this.kurento = await kurentoUtil.createClient(kurentoUrl);
+        this.kurentoClient = await kurentoUtil.createClient(kurentoUrl);
     }
 
     /**
@@ -80,14 +81,16 @@ class MessageServer {
             case 'teacherJoin':
                 this.teacherJoinHandler(context, request, accept, reject);
                 break;
-            case 'iceCandidate':
+            case 'clientIceCandidate':
+                this.clientIceCandidateHandler(context, request, accept, reject);
+                break;
         }
     }
 
     async startMeetingHandler(context, request, accept, reject) {
         let {room} = context;
 
-        this.kurento.create('MediaPipeline').then((pipeline)=> {
+        this.kurentoClient.create('MediaPipeline').then((pipeline)=> {
             console.log("pipeline", pipeline);
 
             room.setMediaPipeline(pipeline);
@@ -100,7 +103,7 @@ class MessageServer {
     }
 
     async teacherJoinHandler(context, request, accept, reject) {
-        let {room} = context;
+        let {room, peer} = context;
         let {sdpOffer} = request.data;
 
         if (!room.mediaPipeline) {
@@ -110,15 +113,35 @@ class MessageServer {
 
         let webRtcEndpoint = await room.mediaPipeline.create('WebRtcEndpoint');
         room.patchPeer(peer.id, webRtcEndpoint);
+        let iceCandidates = room.getPeerIceCandidates(peer.id);
+        while(iceCandidates.length) {
+            let candidate= iceCandidates.shift();
+            webRtcEndpoint.addIceCandidate(candidate);
+        }
+
+
         await webRtcEndpoint.connect(webRtcEndpoint);
 
+        webRtcEndpoint.on('OnIceCandidate', function(event) {
+            var candidate = kurento.getComplexType('IceCandidate')(event.candidate);
+            peer.request("serverIceCandidate", {candidate})
+        });
+
         let sdpAnswer = await webRtcEndpoint.processOffer(sdpOffer);
+        webRtcEndpoint.gatherCandidates();
         accept(sdpAnswer);
     }
 
+    async clientIceCandidateHandler(context, request, accept, reject) {
+        let {room, peer} = context, {candidate} = request.data;
+        let iceCandidate = kurento.getComplexType('IceCandidate')(_candidate);
 
-    async iceCandidateHandler(context, request, accept, reject) {
-        let {candidate} = request.data;
+        webRtcEndpoint =room.getPeerWebRtcEndpoint(peer.id);
+        if (!!webRtcEndpoint) {
+            webRtcEndpoint.addIceCandidate(iceCandidate);
+        } else {
+            room.getPeerIceCandidates(peer.id).push(iceCandidate);
+        }
         accept();
     }
 

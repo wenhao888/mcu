@@ -2,7 +2,7 @@
  *  each peer will have the following data:
  *     {
  *       id
- *       WebRtcEndpoint
+ *       webRtcEndpoint
  *
  *     }
  */
@@ -13,6 +13,7 @@ class Room {
         this.protooRoom=protooRoom;
         this.mediaPipeline=null;
         this.peers = new Map();
+        this.iceCandidates =[];
     }
 
     patchPeer(id, update={}) {
@@ -22,6 +23,16 @@ class Room {
 
     setMediaPipeline(mediaPipeline){
         this.mediaPipeline = mediaPipeline;
+    }
+
+    getPeerWebRtcEndpoint(peerId) {
+        let peerInfo =this.peers.get(id) || {};
+        return peerInfo.webRtcEndpoint;
+    }
+
+    getPeerIceCandidates(peerId) {
+        let peerInfo =this.peers.get(id) || {};
+        return peerInfo.iceCandidates || [];
     }
 }
 

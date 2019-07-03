@@ -11,15 +11,23 @@ class App extends Component {
     constructor(...args) {
         super(...args);
         this.roomsUrl = WsUtil.getRoomUrl();
-
     }
-
 
     componentDidMount() {
         this.transport = new protooClient.WebSocketTransport(this.roomsUrl + "/0");
         this.peer = new protooClient.Peer(this.transport);
 
+        this.peer.on('request',this.socketMessageHandler);
     }
+
+
+    socketMessageHandler = async (request, accept, reject)=>{
+        switch(request.method) {
+            case 'serverIceCandidate':
+                this.webRtcPeer.addIceCandidate(request.data.candidate);
+                break;
+        }
+    };
 
     createRoom = async () => {
         if (this.peer == null) {
@@ -51,7 +59,7 @@ class App extends Component {
     };
 
     onIceCandidate(candidate) {
-        this.peer.request("iceCandidate", {candidate})
+        this.peer.request("clientIceCandidate", {candidate})
     }
 
     async onOffer(error, sdpOffer = {}) {
