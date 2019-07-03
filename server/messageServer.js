@@ -134,9 +134,9 @@ class MessageServer {
 
     async clientIceCandidateHandler(context, request, accept, reject) {
         let {room, peer} = context, {candidate} = request.data;
-        let iceCandidate = kurento.getComplexType('IceCandidate')(_candidate);
+        let iceCandidate = kurento.getComplexType('IceCandidate')(candidate);
 
-        webRtcEndpoint =room.getPeerWebRtcEndpoint(peer.id);
+        let webRtcEndpoint =room.getPeerWebRtcEndpoint(peer.id);
         if (!!webRtcEndpoint) {
             webRtcEndpoint.addIceCandidate(iceCandidate);
         } else {

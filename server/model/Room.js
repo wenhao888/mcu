@@ -26,12 +26,12 @@ class Room {
     }
 
     getPeerWebRtcEndpoint(peerId) {
-        let peerInfo =this.peers.get(id) || {};
+        let peerInfo =this.peers.get(peerId) || {};
         return peerInfo.webRtcEndpoint;
     }
 
     getPeerIceCandidates(peerId) {
-        let peerInfo =this.peers.get(id) || {};
+        let peerInfo =this.peers.get(peerId) || {};
         return peerInfo.iceCandidates || [];
     }
 }

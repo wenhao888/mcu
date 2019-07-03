@@ -42,6 +42,7 @@ class App extends Component {
         if (this.peer == null) {
             return;
         }
+
         let self = this;
         var options = {
             localVideo: this.localVideo,
@@ -58,9 +59,9 @@ class App extends Component {
         });
     };
 
-    onIceCandidate(candidate) {
+    onIceCandidate = (candidate)=>{
         this.peer.request("clientIceCandidate", {candidate})
-    }
+    };
 
     async onOffer(error, sdpOffer = {}) {
         if (error) {
@@ -87,7 +88,7 @@ class App extends Component {
                     }}/>
 
                     <button onClick={this.createRoom}>Create Room0</button>
-                    <button onclick={this.joinAsTeacher}>Join as teacher</button>
+                    <button onClick={this.joinAsTeacher}>Join as teacher</button>
                 </div>
 
 
