@@ -6,5 +6,5 @@ run();
 
 async function run () {
     let rawHttpServer = await  httpServer.start();
-    await messageServer.start(rawHttpServer);
+    await messageServer.start(rawHttpServer, 'ws://localhost:8888/kurento');
 }

@@ -10,6 +10,7 @@
     "debug": "~2.2.0",
     "ejs": "^2.6.2",
     "express": "~4.13.4",
+    "kurento-client": "^6.10.0",
     "kurento-utils": "^6.10.0",
     "morgan": "~1.7.0",
     "protoo-client": "^4.0.3",

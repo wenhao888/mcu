@@ -8,7 +8,7 @@ import './App.css';
 
 
 class App extends Component {
-    constructor(...args){
+    constructor(...args) {
         super(...args);
         this.roomsUrl = WsUtil.getRoomUrl();
 
@@ -16,46 +16,50 @@ class App extends Component {
 
 
     componentDidMount() {
-        this.transport = new protooClient.WebSocketTransport(this.roomsUrl+"/0");
+        this.transport = new protooClient.WebSocketTransport(this.roomsUrl + "/0");
         this.peer = new protooClient.Peer(this.transport);
 
     }
 
     createRoom = async () => {
+        if (this.peer == null) {
+            return;
+        }
+
+        await this.peer.request("startMeeting");
+    };
+
+
+    joinAsTeacher = async () => {
+        if (this.peer == null) {
+            return;
+        }
+        let self = this;
         var options = {
             localVideo: this.localVideo,
             remoteVideo: this.remoteVideo,
             onicecandidate: this.onIceCandidate
         };
 
-        if (this.peer != null) {
-            this.webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options, function (error) {
-                if (error)  this.onError(error);
-                this.generateOffer(this.onOffer);
-            });
-        }
+        this.webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options, async function (error) {
+            if (error) {
+                self.onError(error);
+            } else {
+                this.generateOffer(self.onOffer.bind(self));
+            }
+        });
     };
 
-
     onIceCandidate(candidate) {
-        console.log('Local candidate' + JSON.stringify(candidate));
-
-        var message = {
-            id: 'onIceCandidate',
-            candidate: candidate
-        };
-        //sendMessage(message);
+        this.peer.request("iceCandidate", {candidate})
     }
 
-    onOffer(error, offerSdp) {
-        if (error) return this.onError(error);
-
-        console.info('Invoking SDP offer callback function ');
-        var message = {
-            id: 'start',
-            sdpOffer: offerSdp
-        };
-        //sendMessage(message);
+    async onOffer(error, sdpOffer = {}) {
+        if (error) {
+            this.onError(error);
+            return;
+        }
+        await this.peer.request("teacherJoin", {sdpOffer});
     }
 
     onError = (error) => {
@@ -75,6 +79,7 @@ class App extends Component {
                     }}/>
 
                     <button onClick={this.createRoom}>Create Room0</button>
+                    <button onclick={this.joinAsTeacher}>Join as teacher</button>
                 </div>
 
 

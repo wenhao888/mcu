@@ -10,30 +10,15 @@
  */
 
 class Room {
-    constructor(id, protooRoom, mediaRouterId) {
+    constructor(id, protooRoom) {
         this.id=id;
         this.protooRoom=protooRoom;
-        this.mediaRouterId=mediaRouterId;
+        this.mediaPipeline=null;
         this.peers = new Map();
     }
 
-
-    patchPeer (peer={}) {
-        if ( ! peer.id) {
-            return;
-        }
-
-        let old=this.peers.get(peer.id) || {};
-        this.peers.set(peer.id, {...old, ...peer})
-    };
-
-
-    getPeerSendTransport(peerId) {
-        return this.peers.get(peerId).sendTransportId;
-    };
-
-    getPeerRecvTransport (peerId) {
-        return this.peers.get(peerId).recvTransportId;
+    setMediaPipeline(mediaPipeline){
+        this.mediaPipeline = mediaPipeline;
     }
 }
 
