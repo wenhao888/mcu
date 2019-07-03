@@ -2,10 +2,8 @@
  *  each peer will have the following data:
  *     {
  *       id
- *       sendTransportId,
- *       recvTransportId,
- *       producerId,
- *       consumerId
+ *       WebRtcEndpoint
+ *
  *     }
  */
 
@@ -15,6 +13,11 @@ class Room {
         this.protooRoom=protooRoom;
         this.mediaPipeline=null;
         this.peers = new Map();
+    }
+
+    patchPeer(id, update={}) {
+        let peerInfo =this.peers.get(id) || {};
+        this.peers.set(id, {...peerInfo, ... update})
     }
 
     setMediaPipeline(mediaPipeline){

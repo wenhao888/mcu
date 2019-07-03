@@ -88,18 +88,32 @@ class MessageServer {
         let {room} = context;
 
         this.kurento.create('MediaPipeline').then((pipeline)=> {
+            console.log("pipeline", pipeline);
+
             room.setMediaPipeline(pipeline);
             accept({});
 
         }, (error) => {
            console.log("create MediaPipeline failed: ", error);
-           reject({"message":"create MediaPipeline failed"});
+           reject("create MediaPipeline failed");
         });
     }
 
     async teacherJoinHandler(context, request, accept, reject) {
+        let {room} = context;
         let {sdpOffer} = request.data;
-        accept({});
+
+        if (!room.mediaPipeline) {
+            reject("mediapipeline is empty");
+            return;
+        }
+
+        let webRtcEndpoint = await room.mediaPipeline.create('WebRtcEndpoint');
+        room.patchPeer(peer.id, webRtcEndpoint);
+        await webRtcEndpoint.connect(webRtcEndpoint);
+
+        let sdpAnswer = await webRtcEndpoint.processOffer(sdpOffer);
+        accept(sdpAnswer);
     }
 
 
