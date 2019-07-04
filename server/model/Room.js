@@ -3,7 +3,7 @@
  *     {
  *       id
  *       webRtcEndpoint
- *
+ *       iceCandidates
  *     }
  */
 
@@ -13,16 +13,11 @@ class Room {
         this.protooRoom=protooRoom;
         this.mediaPipeline=null;
         this.peers = new Map();
-        this.iceCandidates =[];
     }
 
     patchPeer(id, update={}) {
         let peerInfo =this.peers.get(id) || {};
         this.peers.set(id, {...peerInfo, ... update})
-    }
-
-    setMediaPipeline(mediaPipeline){
-        this.mediaPipeline = mediaPipeline;
     }
 
     getPeerWebRtcEndpoint(peerId) {

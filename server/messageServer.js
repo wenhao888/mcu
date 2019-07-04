@@ -110,14 +110,12 @@ class MessageServer {
 
 
     async joinMeeting(context, request, accept, reject, callback) {
-        let {peer, room} = context;
-
-        let sdpOffer= request.data.sdpOffer;
-
-        //console.log("room", room);
-
+        let {peer, room} = context, sdpOffer= request.data.sdpOffer;
         let pipeline= room.mediaPipeline;
+
+
         let webRtcEndpoint = await pipeline.create('WebRtcEndpoint');
+        room.patchPeer(peer.id, {webRtcEndpoint});
 
         if (candidatesQueue[sessionId]) {
             while(candidatesQueue[sessionId].length) {
@@ -129,9 +127,8 @@ class MessageServer {
         await webRtcEndpoint.connect(webRtcEndpoint);
 
         webRtcEndpoint.on('OnIceCandidate', function(event) {
-            var candidate = kurento.getComplexType('IceCandidate')(event.candidate);
-            peer.request(('serverIceCandidate',
-                {candidate : candidate}));
+            var c = kurento.getComplexType('IceCandidate')(event.candidate);
+            peer.request(('serverIceCandidate', {candidate : c}));
         });
 
         webRtcEndpoint.processOffer(sdpOffer).then( function(sdpAnswer) {
@@ -148,19 +145,19 @@ class MessageServer {
 
 
     onClientIceCandidate(context, request, accept, reject) {
-        var candidate = kurento.getComplexType('IceCandidate')(request.data.candidate);
+        var c = kurento.getComplexType('IceCandidate')(request.data.candidate);
 
         if (sessions[sessionId]) {
             console.info('Sending candidate');
             var webRtcEndpoint = sessions[sessionId].webRtcEndpoint;
-            webRtcEndpoint.addIceCandidate(candidate);
+            webRtcEndpoint.addIceCandidate(c);
         }
         else {
             console.info('Queueing candidate');
             if (!candidatesQueue[sessionId]) {
                 candidatesQueue[sessionId] = [];
             }
-            candidatesQueue[sessionId].push(candidate);
+            candidatesQueue[sessionId].push(c);
         }
     }
 
