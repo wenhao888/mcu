@@ -1,12 +1,10 @@
 import React, {Component} from 'react';
 import kurentoUtils from "kurento-utils"
 import protooClient from 'protoo-client';
-
-
 import WsUtil from "./utl/WsUtil";
 import './App.css';
 
-var ws = new WebSocket('wss://localhost:8443/magicmirror');
+
 
 const I_CAN_START = 0;
 const I_CAN_STOP = 1;
@@ -19,20 +17,20 @@ class App extends Component {
     }
 
     componentDidMount() {
-        ws.onmessage = this.wsMessageHandler.bind(this);
+        this.transport = new protooClient.WebSocketTransport(this.roomsUrl+"/0");
+        this.peer = new protooClient.Peer(this.transport);
+
+        this.peer.on('request', this.wsMessageHandler.bind(this));
     }
 
 
-    wsMessageHandler(message) {
-        var parsedMessage = JSON.parse(message.data);
-        console.info('Received message: ' + message.data);
-
-        switch (parsedMessage.id) {
+    wsMessageHandler(request, accept, reject, ) {
+        switch (request.method) {
             case 'startResponse':
-                this.startResponse(parsedMessage);
+                this.startResponse(request.data);
                 break;
             case 'serverIceCandidate':
-                this.webRtcPeer.addIceCandidate(parsedMessage.candidate)
+                this.webRtcPeer.addIceCandidate(request.data.candidate)
                 break;
         }
     }
@@ -53,36 +51,18 @@ class App extends Component {
     };
 
     onIceCandidate(candidate) {
-        console.log('Local candidate' + JSON.stringify(candidate));
-
-        var message = {
-            id : 'clientIceCandidate',
-            candidate : candidate
-        };
-        this.sendMessage(message);
+        this.peer.request('clientIceCandidate', {candidate});
     }
 
-    onOffer(error, offerSdp) {
+    onOffer(error, sdpOffer) {
         console.info('Invoking SDP offer callback function ');
-        var message = {
-            id : 'start',
-            sdpOffer : offerSdp
-        };
-
-        this.sendMessage(message);
+        this.peer.request('start', {sdpOffer});
     }
-
-
 
     startResponse(message) {
         this.webRtcPeer.processAnswer(message.sdpAnswer);
     }
 
-    sendMessage(message) {
-        var jsonMessage = JSON.stringify(message);
-        console.log('Senging message: ' + jsonMessage);
-        ws.send(jsonMessage);
-    }
 
     render() {
         return (

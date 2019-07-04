@@ -25,6 +25,8 @@ var ws = require('ws');
 var kurento = require('kurento-client');
 var fs    = require('fs');
 var https = require('https');
+const protoo = require('protoo-server');
+
 
 var argv = minimist(process.argv.slice(2), {
     default: {
@@ -69,76 +71,47 @@ var kurentoClient = null;
  */
 var asUrl = url.parse(argv.as_uri);
 var port = asUrl.port;
-var server = https.createServer(options, app).listen(port, function() {
+var httpsServer = https.createServer(options, app).listen(port, function() {
     console.log('Kurento Tutorial started');
     console.log('Open ' + url.format(asUrl) + ' with a WebRTC capable browser');
 });
 
-var wss = new ws.Server({
-    server : server,
-    path : '/magicmirror'
-});
+
+
+const protooOptions =
+    {
+        maxReceivedFrameSize: 960000, // 960 KBytes.
+        maxReceivedMessageSize: 960000,
+        fragmentOutgoingMessages: true,
+        fragmentationThreshold: 960000
+    };
+
+const protooServer = new protoo.WebSocketServer(httpsServer, protooOptions);
+var room=null, peer=null;
 
 /*
  * Management of WebSocket messages
  */
-wss.on('connection', function(ws) {
-    var sessionId = null;
-    var request = ws.upgradeReq;
-    var response = {
-        writeHead : {}
-    };
+protooServer.on('connectionrequest', function(info, accept, reject) {
+    room = new protoo.Room();
+    let transport = accept();
+    peer = room.createPeer('bob' + new Date().getTime(), transport);
 
-    sessionHandler(request, response, function(err) {
-        sessionId = request.session.id;
-        console.log('Connection received with sessionId ' + sessionId);
-    });
+    peer.on('request', function(request, accept, reject) {
+        let sessionId ="session_1";
 
-    ws.on('error', function(error) {
-        console.log('Connection ' + sessionId + ' error');
-        stop(sessionId);
-    });
-
-    ws.on('close', function() {
-        console.log('Connection ' + sessionId + ' closed');
-        stop(sessionId);
-    });
-
-    ws.on('message', function(_message) {
-        var message = JSON.parse(_message);
-        console.log('Connection ' + sessionId + ' received message ', message);
-
-        switch (message.id) {
+        switch (request.method) {
             case 'start':
                 console.log("start -----   ");
-                sessionId = request.session.id;
-                start(sessionId, ws, message.sdpOffer, function(error, sdpAnswer) {
-                    if (error) {
-                        return ws.send(JSON.stringify({
-                            id : 'error',
-                            message : error
-                        }));
-                    }
-                    ws.send(JSON.stringify({
-                        id : 'startResponse',
-                        sdpAnswer : sdpAnswer
-                    }));
+                start(sessionId, peer, request.data.sdpOffer, function(error, sdpAnswer) {
+
+                    peer.request( 'startResponse',
+                        {sdpAnswer : sdpAnswer});
                 });
                 break;
 
-            case 'stop':
-                stop(sessionId);
-                break;
-
             case 'clientIceCandidate':
-                onClientIceCandidate(sessionId, message.candidate);
-                break;
-
-            default:
-                ws.send(JSON.stringify({
-                    id : 'error',
-                    message : 'Invalid message ' + message
-                }));
+                onClientIceCandidate(sessionId, request.data.candidate);
                 break;
         }
 
@@ -159,7 +132,7 @@ async function getKurentoClient(callback) {
     return kurentoClient;
 }
 
-async function start(sessionId, ws, sdpOffer, callback) {
+async function start(sessionId, peer, sdpOffer, callback) {
     if (!sessionId) {
         return callback('Cannot use undefined sessionId');
     }
@@ -176,25 +149,13 @@ async function start(sessionId, ws, sdpOffer, callback) {
     }
 
     connectMediaElements(webRtcEndpoint).then( function(error) {
-        if (error) {
-            pipeline.release();
-            return callback(error);
-        }
-
         webRtcEndpoint.on('OnIceCandidate', function(event) {
             var candidate = kurento.getComplexType('IceCandidate')(event.candidate);
-            ws.send(JSON.stringify({
-                id : 'serverIceCandidate',
-                candidate : candidate
-            }));
+            peer.request(('serverIceCandidate',
+                {candidate : candidate}));
         });
 
         webRtcEndpoint.processOffer(sdpOffer).then( function(sdpAnswer) {
-            if (error) {
-                pipeline.release();
-                return callback(error);
-            }
-
             sessions[sessionId] = {
                 'pipeline' : pipeline,
                 'webRtcEndpoint' : webRtcEndpoint
@@ -221,16 +182,6 @@ function connectMediaElements(webRtcEndpoint) {
 }
 
 
-function stop(sessionId) {
-    if (sessions[sessionId]) {
-        var pipeline = sessions[sessionId].pipeline;
-        console.info('Releasing pipeline');
-        pipeline.release();
-
-        delete sessions[sessionId];
-        delete candidatesQueue[sessionId];
-    }
-}
 
 function onClientIceCandidate(sessionId, _candidate) {
     var candidate = kurento.getComplexType('IceCandidate')(_candidate);
