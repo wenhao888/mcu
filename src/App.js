@@ -4,12 +4,6 @@ import protooClient from 'protoo-client';
 import WsUtil from "./utl/WsUtil";
 import './App.css';
 
-
-
-const I_CAN_START = 0;
-const I_CAN_STOP = 1;
-const I_AM_STARTING = 2;
-
 class App extends Component {
     constructor(...args) {
         super(...args);
@@ -19,18 +13,16 @@ class App extends Component {
     componentDidMount() {
         this.transport = new protooClient.WebSocketTransport(this.roomsUrl+"/0");
         this.peer = new protooClient.Peer(this.transport);
-
         this.peer.on('request', this.wsMessageHandler.bind(this));
     }
 
-
     wsMessageHandler(request, accept, reject, ) {
         switch (request.method) {
-            case 'startResponse':
-                this.startResponse(request.data);
+            case 'joinSuccess':
+                this.joinSuccess(request.data.sdpAnswer);
                 break;
             case 'serverIceCandidate':
-                this.webRtcPeer.addIceCandidate(request.data.candidate)
+                this.webRtcPeer.addIceCandidate(request.data.candidate);
                 break;
         }
     }
@@ -39,7 +31,7 @@ class App extends Component {
         this.peer.request('createMeeting');
     };
 
-    joinMeeting=()=> {
+    joinMeeting= async ()=> {
         console.log('Creating WebRtcPeer and generating local sdp offer ...');
 
         var options = {
@@ -49,8 +41,10 @@ class App extends Component {
         };
 
         let self = this;
-        this.webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options, function(error) {
-            this.generateOffer(self.onOffer.bind(self));
+        this.webRtcPeer = await  kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options, function(error) {
+            this.generateOffer((error, sdpOffer)=>{
+                self.peer.request('joinMeeting', {sdpOffer})
+            });
         });
     };
 
@@ -58,13 +52,10 @@ class App extends Component {
         this.peer.request('clientIceCandidate', {candidate});
     }
 
-    onOffer(error, sdpOffer) {
-        console.info('Invoking SDP offer callback function ');
-        this.peer.request('joinMeeting', {sdpOffer});
-    }
 
-    startResponse(message) {
-        this.webRtcPeer.processAnswer(message.sdpAnswer);
+    joinSuccess(sdpAnswer) {
+        console.log("sdpAnswer", sdpAnswer)
+        this.webRtcPeer.processAnswer(sdpAnswer);
     }
 
 

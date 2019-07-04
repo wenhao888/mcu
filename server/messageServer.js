@@ -87,7 +87,7 @@ class MessageServer {
                 console.log("start -----   ");
                 this.joinMeeting(context, sessionId, request.data.sdpOffer, function(error, sdpAnswer) {
 
-                    peer.request( 'startResponse',
+                    peer.request('joinSuccess',
                         {sdpAnswer : sdpAnswer});
                 });
                 break;
