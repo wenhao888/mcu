@@ -109,37 +109,27 @@ class MessageServer {
             }
         }
 
-        this.connectMediaElements(webRtcEndpoint).then( function(error) {
-            webRtcEndpoint.on('OnIceCandidate', function(event) {
-                var candidate = kurento.getComplexType('IceCandidate')(event.candidate);
-                peer.request(('serverIceCandidate',
-                    {candidate : candidate}));
-            });
-
-            webRtcEndpoint.processOffer(sdpOffer).then( function(sdpAnswer) {
-                sessions[sessionId] = {
-                    'pipeline' : pipeline,
-                    'webRtcEndpoint' : webRtcEndpoint
-                };
-                return callback(null, sdpAnswer);
-            });
-
-            webRtcEndpoint.gatherCandidates(function(error) {
-                if (error) {
-                    return callback(error);
-                }
-            });
+        await webRtcEndpoint.connect(webRtcEndpoint);
+        webRtcEndpoint.on('OnIceCandidate', function(event) {
+            var candidate = kurento.getComplexType('IceCandidate')(event.candidate);
+            peer.request(('serverIceCandidate',
+                {candidate : candidate}));
         });
 
+        webRtcEndpoint.processOffer(sdpOffer).then( function(sdpAnswer) {
+            sessions[sessionId] = {
+                'pipeline' : pipeline,
+                'webRtcEndpoint' : webRtcEndpoint
+            };
+            return callback(null, sdpAnswer);
+        });
 
+        webRtcEndpoint.gatherCandidates(function(error) {
+            if (error) {
+                return callback(error);
+            }
+        });
 
-
-    }
-
-
-
-    connectMediaElements(webRtcEndpoint) {
-        return  webRtcEndpoint.connect(webRtcEndpoint);
     }
 
 
