@@ -1,7 +1,6 @@
 /**
  *  each peer will have the following data:
  *     {
- *       id
  *       webRtcEndpoint
  *       iceCandidates
  *     }
@@ -15,19 +14,32 @@ class Room {
         this.peers = new Map();
     }
 
-    patchPeer(id, update={}) {
-        let peerInfo =this.peers.get(id) || {};
-        this.peers.set(id, {...peerInfo, ... update})
+    patchPeer(peerId, update={}) {
+        let peerInfo =this.createPeerIfNotExist(peerId);
+        this.peers.set(peerId, {...peerInfo, ... update})
     }
 
     getPeerWebRtcEndpoint(peerId) {
-        let peerInfo =this.peers.get(peerId) || {};
+        let peerInfo =this.createPeerIfNotExist(peerId);
         return peerInfo.webRtcEndpoint;
     }
 
     getPeerIceCandidates(peerId) {
-        let peerInfo =this.peers.get(peerId) || {};
-        return peerInfo.iceCandidates || [];
+        let peerInfo =this.createPeerIfNotExist(peerId);
+        return peerInfo.iceCandidates;
+    }
+
+
+    createPeerIfNotExist(peerId){
+        let peerInfo =this.peers.get(peerId);
+        if ( ! peerInfo) {
+            peerInfo={
+                webRtcEndpoint:null,
+                iceCandidates:[]
+            };
+            this.peers.set(peerId, peerInfo);
+        }
+        return peerInfo;
     }
 }
 

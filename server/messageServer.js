@@ -78,7 +78,6 @@ class MessageServer {
             peer: peer
         };
 
-
         switch (method) {
             case 'createMeeting':
                 this.createMeeting(context, request, accept, reject);
@@ -122,21 +121,19 @@ class MessageServer {
      */
     async joinMeeting(context, request, accept, reject) {
         let {peer, room} = context, sdpOffer= request.data.sdpOffer;
-        let pipeline= room.mediaPipeline;
+        let pipeline= room.mediaPipeline, candidates= room.getPeerIceCandidates(peer.id);
 
         let webRtcEndpoint = await pipeline.create('WebRtcEndpoint');
         room.patchPeer(peer.id, {webRtcEndpoint});
 
-        if (candidatesQueue[sessionId]) {
-            while(candidatesQueue[sessionId].length) {
-                var candidate = candidatesQueue[sessionId].shift();
-                webRtcEndpoint.addIceCandidate(candidate);
-            }
+        while(candidates.length) {
+            let c = candidates.shift();
+            webRtcEndpoint.addIceCandidate(c);
         }
 
         await webRtcEndpoint.connect(webRtcEndpoint);
         webRtcEndpoint.on('OnIceCandidate', function(event) {
-            var c = kurento.getComplexType('IceCandidate')(event.candidate);
+            let c = kurento.getComplexType('IceCandidate')(event.candidate);
             peer.request('serverIceCandidate', {candidate : c});
         });
         webRtcEndpoint.processOffer(sdpOffer).then(function(sdpAnswer) {
@@ -151,22 +148,26 @@ class MessageServer {
         webRtcEndpoint.gatherCandidates();
     }
 
-
-
+    /**
+     * handle ice candidate from client side
+     *
+     * @param context
+     * @param request
+     * @param accept
+     * @param reject
+     */
     onClientIceCandidate(context, request, accept, reject) {
-        var c = kurento.getComplexType('IceCandidate')(request.data.candidate);
+        let {peer, room} = context, webRtcEndpoint=room.getPeerWebRtcEndpoint(peer.id);
+        let c = kurento.getComplexType('IceCandidate')(request.data.candidate);
 
-        if (sessions[sessionId]) {
+        if (webRtcEndpoint) {
             console.info('Sending candidate');
-            var webRtcEndpoint = sessions[sessionId].webRtcEndpoint;
             webRtcEndpoint.addIceCandidate(c);
         }
         else {
             console.info('Queueing candidate');
-            if (!candidatesQueue[sessionId]) {
-                candidatesQueue[sessionId] = [];
-            }
-            candidatesQueue[sessionId].push(c);
+            let candidates= room.getPeerIceCandidates(peer.id);
+            candidates.push(c);
         }
     }
 
