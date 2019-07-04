@@ -79,9 +79,13 @@ class MessageServer {
         let sessionId="session1";
 
         switch (method) {
-            case 'start':
+            case 'createMeeting':
+                this.createMeeting(context, request, accept, reject);
+                break;
+
+            case 'joinMeeting':
                 console.log("start -----   ");
-                this.startMeeting(sessionId, peer, request.data.sdpOffer, function(error, sdpAnswer) {
+                this.joinMeeting(context, sessionId, request.data.sdpOffer, function(error, sdpAnswer) {
 
                     peer.request( 'startResponse',
                         {sdpAnswer : sdpAnswer});
@@ -94,12 +98,23 @@ class MessageServer {
         }
     }
 
-    async startMeeting(sessionId, peer, sdpOffer, callback) {
-        if (!sessionId) {
-            return callback('Cannot use undefined sessionId');
+    async createMeeting (context, request, accept, reject) {
+        let {room} = context;
+        if (!room.mediaPipeline) {
+            room.mediaPipeline = await this.kurentoClient.create('MediaPipeline');
         }
+        console.log("mediaPipeline", room.mediaPipeline);
 
-        let pipeline = await this.kurentoClient.create('MediaPipeline');
+        accept({});
+    }
+
+
+    async joinMeeting(context, sessionId, sdpOffer, callback) {
+        let {peer, room} = context;
+
+        //console.log("room", room);
+
+        let pipeline= room.mediaPipeline;
         let webRtcEndpoint = await pipeline.create('WebRtcEndpoint');
 
         if (candidatesQueue[sessionId]) {
@@ -110,6 +125,7 @@ class MessageServer {
         }
 
         await webRtcEndpoint.connect(webRtcEndpoint);
+
         webRtcEndpoint.on('OnIceCandidate', function(event) {
             var candidate = kurento.getComplexType('IceCandidate')(event.candidate);
             peer.request(('serverIceCandidate',
@@ -124,12 +140,7 @@ class MessageServer {
             return callback(null, sdpAnswer);
         });
 
-        webRtcEndpoint.gatherCandidates(function(error) {
-            if (error) {
-                return callback(error);
-            }
-        });
-
+        webRtcEndpoint.gatherCandidates();
     }
 
 

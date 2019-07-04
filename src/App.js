@@ -35,7 +35,11 @@ class App extends Component {
         }
     }
 
-    start=()=> {
+    createMeeting = () => {
+        this.peer.request('createMeeting');
+    };
+
+    joinMeeting=()=> {
         console.log('Creating WebRtcPeer and generating local sdp offer ...');
 
         var options = {
@@ -56,7 +60,7 @@ class App extends Component {
 
     onOffer(error, sdpOffer) {
         console.info('Invoking SDP offer callback function ');
-        this.peer.request('start', {sdpOffer});
+        this.peer.request('joinMeeting', {sdpOffer});
     }
 
     startResponse(message) {
@@ -76,7 +80,9 @@ class App extends Component {
                         this.localVideo = video
                     }}/>
 
-                    <button onClick={this.start}>Start </button>
+                    <button onClick={this.createMeeting}>Create meeting </button>
+                    <button onClick={this.joinMeeting}>Join </button>
+
                 </div>
 
 
