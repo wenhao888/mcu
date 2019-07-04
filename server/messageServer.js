@@ -24,6 +24,8 @@ const pattern = new UrlPattern('/rooms/:roomId');
 candidatesQueue={};
 sessions ={};
 
+let sessionId="session-1";
+
 class MessageServer {
     async start(rawHttpServer, kurentoUrl) {
         const server = new protooServer.WebSocketServer(rawHttpServer, options);
@@ -76,7 +78,6 @@ class MessageServer {
             peer: peer
         };
 
-        let sessionId="session1";
 
         switch (method) {
             case 'createMeeting':
@@ -84,8 +85,7 @@ class MessageServer {
                 break;
 
             case 'joinMeeting':
-                console.log("start -----   ");
-                this.joinMeeting(context, sessionId, request.data.sdpOffer, function(error, sdpAnswer) {
+                this.joinMeeting(context, request, accept, reject, function(error, sdpAnswer) {
 
                     peer.request('joinSuccess',
                         {sdpAnswer : sdpAnswer});
@@ -93,7 +93,7 @@ class MessageServer {
                 break;
 
             case 'clientIceCandidate':
-                this.onClientIceCandidate(sessionId, request.data.candidate);
+                this.onClientIceCandidate(context,request, accept, reject);
                 break;
         }
     }
@@ -109,8 +109,10 @@ class MessageServer {
     }
 
 
-    async joinMeeting(context, sessionId, sdpOffer, callback) {
+    async joinMeeting(context, request, accept, reject, callback) {
         let {peer, room} = context;
+
+        let sdpOffer= request.data.sdpOffer;
 
         //console.log("room", room);
 
@@ -145,8 +147,8 @@ class MessageServer {
 
 
 
-    onClientIceCandidate(sessionId, _candidate) {
-        var candidate = kurento.getComplexType('IceCandidate')(_candidate);
+    onClientIceCandidate(context, request, accept, reject) {
+        var candidate = kurento.getComplexType('IceCandidate')(request.data.candidate);
 
         if (sessions[sessionId]) {
             console.info('Sending candidate');

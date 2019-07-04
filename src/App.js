@@ -54,7 +54,6 @@ class App extends Component {
 
 
     joinSuccess(sdpAnswer) {
-        console.log("sdpAnswer", sdpAnswer)
         this.webRtcPeer.processAnswer(sdpAnswer);
     }
 
