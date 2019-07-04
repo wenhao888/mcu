@@ -85,11 +85,7 @@ class MessageServer {
                 break;
 
             case 'joinMeeting':
-                this.joinMeeting(context, request, accept, reject, function(error, sdpAnswer) {
-
-                    peer.request('joinSuccess',
-                        {sdpAnswer : sdpAnswer});
-                });
+                this.joinMeeting(context, request, accept, reject);
                 break;
 
             case 'clientIceCandidate':
@@ -98,21 +94,35 @@ class MessageServer {
         }
     }
 
+    /**
+     * handle create meeting request
+     *
+     * @param context
+     * @param request
+     * @param accept
+     * @param reject
+     * @returns {Promise.<void>}
+     */
     async createMeeting (context, request, accept, reject) {
         let {room} = context;
         if (!room.mediaPipeline) {
             room.mediaPipeline = await this.kurentoClient.create('MediaPipeline');
         }
-        console.log("mediaPipeline", room.mediaPipeline);
-
         accept({});
     }
 
-
-    async joinMeeting(context, request, accept, reject, callback) {
+    /**
+     * handle join meeting request
+     *
+     * @param context
+     * @param request
+     * @param accept
+     * @param reject
+     * @returns {Promise.<void>}
+     */
+    async joinMeeting(context, request, accept, reject) {
         let {peer, room} = context, sdpOffer= request.data.sdpOffer;
         let pipeline= room.mediaPipeline;
-
 
         let webRtcEndpoint = await pipeline.create('WebRtcEndpoint');
         room.patchPeer(peer.id, {webRtcEndpoint});
@@ -125,18 +135,17 @@ class MessageServer {
         }
 
         await webRtcEndpoint.connect(webRtcEndpoint);
-
         webRtcEndpoint.on('OnIceCandidate', function(event) {
             var c = kurento.getComplexType('IceCandidate')(event.candidate);
-            peer.request(('serverIceCandidate', {candidate : c}));
+            peer.request('serverIceCandidate', {candidate : c});
         });
-
-        webRtcEndpoint.processOffer(sdpOffer).then( function(sdpAnswer) {
+        webRtcEndpoint.processOffer(sdpOffer).then(function(sdpAnswer) {
             sessions[sessionId] = {
                 'pipeline' : pipeline,
                 'webRtcEndpoint' : webRtcEndpoint
             };
-            return callback(null, sdpAnswer);
+            peer.request('joinSuccess',
+                {sdpAnswer : sdpAnswer})
         });
 
         webRtcEndpoint.gatherCandidates();
