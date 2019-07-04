@@ -107,6 +107,8 @@ class MessageServer {
         let {room, peer} = context;
         let {sdpOffer} = request.data;
 
+        console.log("type of offer", typeof (request.data));
+
         if (!room.mediaPipeline) {
             reject("mediapipeline is empty");
             return;
@@ -121,16 +123,20 @@ class MessageServer {
         }
 
 
-        await webRtcEndpoint.connect(webRtcEndpoint);
+        await webRtcEndpoint.connect(webRtcEndpoint).then( () =>{
+            webRtcEndpoint.on('OnIceCandidate', function(event) {
+                var candidate = kurento.getComplexType('IceCandidate')(event.candidate);
+                peer.request("serverIceCandidate", {candidate})
+            });
 
-        webRtcEndpoint.on('OnIceCandidate', function(event) {
-            var candidate = kurento.getComplexType('IceCandidate')(event.candidate);
-            peer.request("serverIceCandidate", {candidate})
+            let sdpAnswer =  webRtcEndpoint.processOffer(sdpOffer)
+                .then(()=>{
+                    accept(sdpAnswer)
+                });
+
+            webRtcEndpoint.gatherCandidates();
+
         });
-
-        let sdpAnswer = await webRtcEndpoint.processOffer(sdpOffer);
-        webRtcEndpoint.gatherCandidates();
-        accept(sdpAnswer);
     }
 
     async clientIceCandidateHandler(context, request, accept, reject) {
@@ -141,7 +147,7 @@ class MessageServer {
         if (!!webRtcEndpoint) {
             webRtcEndpoint.addIceCandidate(iceCandidate);
         } else {
-            room.getPeerIceCandidates(peer.id).push(iceCandidate);
+            room.getPeerIceCandidates(peer.id).push(candidate);
         }
         accept();
     }

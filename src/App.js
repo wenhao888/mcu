@@ -6,6 +6,11 @@ import protooClient from 'protoo-client';
 import WsUtil from "./utl/WsUtil";
 import './App.css';
 
+var ws = new WebSocket('wss://localhost:8443/magicmirror');
+
+const I_CAN_START = 0;
+const I_CAN_STOP = 1;
+const I_AM_STARTING = 2;
 
 class App extends Component {
     constructor(...args) {
@@ -14,71 +19,70 @@ class App extends Component {
     }
 
     componentDidMount() {
-        this.transport = new protooClient.WebSocketTransport(this.roomsUrl + "/0");
-        this.peer = new protooClient.Peer(this.transport);
-
-        this.peer.on('request',this.socketMessageHandler);
+        ws.onmessage = this.wsMessageHandler.bind(this);
     }
 
 
-    socketMessageHandler = async (request, accept, reject)=>{
-        switch(request.method) {
+    wsMessageHandler(message) {
+        var parsedMessage = JSON.parse(message.data);
+        console.info('Received message: ' + message.data);
+
+        switch (parsedMessage.id) {
+            case 'startResponse':
+                this.startResponse(parsedMessage);
+                break;
             case 'serverIceCandidate':
-                console.log("serverIceCandidate: ", request.data.candidate);
-                this.webRtcPeer.addIceCandidate(request.data.candidate);
+                this.webRtcPeer.addIceCandidate(parsedMessage.candidate)
                 break;
         }
-    };
+    }
 
-    createRoom = async () => {
-        if (this.peer == null) {
-            return;
-        }
+    start=()=> {
+        console.log('Creating WebRtcPeer and generating local sdp offer ...');
 
-        await this.peer.request("startMeeting");
-    };
-
-
-    joinAsTeacher = async () => {
-        if (this.peer == null) {
-            return;
-        }
-
-        let self = this;
         var options = {
             localVideo: this.localVideo,
             remoteVideo: this.remoteVideo,
-            onicecandidate: this.onIceCandidate
+            onicecandidate : this.onIceCandidate.bind(this)
         };
 
-        this.webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options, async function (error) {
-            if (error) {
-                self.onError(error);
-            } else {
-                this.generateOffer(self.onOffer.bind(self));
-            }
+        let self = this;
+        this.webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options, function(error) {
+            this.generateOffer(self.onOffer.bind(self));
         });
     };
 
-    onIceCandidate = (candidate)=>{
-        console.log("onIceCandidate", candidate);
-        this.peer.request("clientIceCandidate", {candidate})
-    };
+    onIceCandidate(candidate) {
+        console.log('Local candidate' + JSON.stringify(candidate));
 
-    async onOffer(error, sdpOffer = {}) {
-        if (error) {
-            this.onError(error);
-            return;
-        }
-        let sdpAnswer =await this.peer.request("teacherJoin", {sdpOffer});
-        console.log("sdn answer: ", sdpAnswer);
-        this.webRtcPeer.processAnswer(sdpAnswer);
+        var message = {
+            id : 'clientIceCandidate',
+            candidate : candidate
+        };
+        this.sendMessage(message);
+    }
+
+    onOffer(error, offerSdp) {
+        console.info('Invoking SDP offer callback function ');
+        var message = {
+            id : 'start',
+            sdpOffer : offerSdp
+        };
+
+        this.sendMessage(message);
     }
 
 
-    onError = (error) => {
-        console.error(error);
-    };
+
+    startResponse(message) {
+        this.webRtcPeer.processAnswer(message.sdpAnswer);
+    }
+
+    sendMessage(message) {
+        var jsonMessage = JSON.stringify(message);
+        console.log('Senging message: ' + jsonMessage);
+        ws.send(jsonMessage);
+    }
 
     render() {
         return (
@@ -92,8 +96,7 @@ class App extends Component {
                         this.localVideo = video
                     }}/>
 
-                    <button onClick={this.createRoom}>Create Room0</button>
-                    <button onClick={this.joinAsTeacher}>Join as teacher</button>
+                    <button onClick={this.start}>Start </button>
                 </div>
 
 
