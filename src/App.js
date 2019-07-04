@@ -37,7 +37,11 @@ class App extends Component {
         var options = {
             localVideo: this.localVideo,
             remoteVideo: this.remoteVideo,
-            onicecandidate : this.onIceCandidate.bind(this)
+            onicecandidate : this.onIceCandidate.bind(this),
+            mediaConstraints: {
+                audio:true,
+                video:true
+            }
         };
 
         let self = this;
