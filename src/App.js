@@ -31,6 +31,10 @@ class App extends Component {
         this.peer.request('createMeeting');
     };
 
+    closeMeeting = () => {
+        this.peer.request('closeMeeting');
+    };
+
     joinMeeting= async ()=> {
         console.log('Creating WebRtcPeer and generating local sdp offer ...');
 
@@ -58,6 +62,7 @@ class App extends Component {
 
 
     joinSuccess(sdpAnswer) {
+        console.log("joinSuccess: ", sdpAnswer);
         this.webRtcPeer.processAnswer(sdpAnswer);
     }
 
@@ -75,6 +80,8 @@ class App extends Component {
                     }}/>
 
                     <button onClick={this.createMeeting}>Create meeting </button>
+                    <button onClick={this.closeMeeting}> Close meeting</button>
+
                     <button onClick={this.joinMeeting}>Join </button>
 
                 </div>

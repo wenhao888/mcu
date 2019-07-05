@@ -90,6 +90,9 @@ class MessageServer {
             case 'clientIceCandidate':
                 this.onClientIceCandidate(context,request, accept, reject);
                 break;
+            case 'closeMeeting':
+                this.closeMeeting(context, request, accept, reject);
+                break;
         }
     }
 
@@ -109,7 +112,7 @@ class MessageServer {
         }
 
         if ( ! room.composite) {
-            room.composite = await room.mediaPipeline.create( 'Composite');
+            room.composite = await room.mediaPipeline.create('Composite');
         }
 
         accept({});
@@ -133,7 +136,6 @@ class MessageServer {
         let webRtcEndpoint = await pipeline.create('WebRtcEndpoint');
         let hubPort = await composite.createHubPort();
         room.patchPeer(peer.id, {webRtcEndpoint, hubPort});
-
 
         while(candidates.length) {
             let c = candidates.shift();
@@ -180,6 +182,12 @@ class MessageServer {
             let candidates= room.getPeerIceCandidates(peer.id);
             candidates.push(c);
         }
+    }
+
+
+    closeMeeting(context, request, accept, reject) {
+        let {room} = context;
+        room.release();
     }
 
 }

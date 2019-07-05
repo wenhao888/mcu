@@ -12,7 +12,7 @@ class Room {
         this.id=id;
         this.protooRoom=protooRoom;
         this.mediaPipeline=null;
-        this.Composite=null;
+        this.composite=null;
         this.peers = new Map();
     }
 
@@ -42,6 +42,30 @@ class Room {
             this.peers.set(peerId, peerInfo);
         }
         return peerInfo;
+    }
+
+    release() {
+        this.peers.forEach((peerInfo={}, key, map)=>{
+            if (peerInfo.webRtcEndpoint) {
+                peerInfo.webRtcEndpoint.release();
+            }
+            if (peerInfo.hubPort) {
+                peerInfo.hubPort.release();
+            }
+        });
+        this.peers.clear();
+
+
+        if (this.mediaPipeline){
+            this.mediaPipeline.release();
+            this.mediaPipeline=null;
+        }
+
+        if (this.composite) {
+            this.composite.release();
+            this.composite=null;
+        }
+
     }
 }
 
