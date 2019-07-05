@@ -190,6 +190,7 @@ class MessageServer {
     closeMeeting(context, request, accept, reject) {
         let {room} = context;
         room.release();
+        accept();
     }
 
 }
