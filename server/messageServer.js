@@ -159,6 +159,7 @@ class MessageServer {
         });
 
         webRtcEndpoint.gatherCandidates();
+        accept({})
     }
 
     /**
@@ -182,6 +183,7 @@ class MessageServer {
             let candidates= room.getPeerIceCandidates(peer.id);
             candidates.push(c);
         }
+        accept({});
     }
 
 

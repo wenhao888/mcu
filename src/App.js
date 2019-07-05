@@ -19,14 +19,32 @@ class App extends Component {
     wsMessageHandler(request, accept, reject, ) {
         switch (request.method) {
             case 'joinSuccess':
-                this.joinSuccess(request.data.sdpAnswer);
+                this.joinSuccess(request, accept, reject);
                 break;
             case 'serverIceCandidate':
-                this.webRtcPeer.addIceCandidate(request.data.candidate);
+                this.serverIceCandidate(request, accept, reject);
                 break;
         }
     }
 
+    joinSuccess = (request, accept, reject)=> {
+        accept({});
+
+        let sdpAnswer = request.data.sdpAnswer;
+        console.log("joinSuccess: ", sdpAnswer);
+        this.webRtcPeer.processAnswer(sdpAnswer);
+    };
+
+
+    serverIceCandidate=(request, accept, reject)=> {
+        accept();
+        this.webRtcPeer.addIceCandidate(request.data.candidate)
+    };
+
+    /**
+     * the following are command handler
+     *
+     */
     createMeeting = () => {
         this.peer.request('createMeeting');
     };
@@ -35,20 +53,21 @@ class App extends Component {
         this.peer.request('closeMeeting');
     };
 
+
     joinMeeting= async ()=> {
         console.log('Creating WebRtcPeer and generating local sdp offer ...');
+        let self = this;
 
         var options = {
             localVideo: this.localVideo,
             remoteVideo: this.remoteVideo,
-            onicecandidate : this.onIceCandidate.bind(this),
+            onicecandidate : (candidate)=> {this.peer.request('clientIceCandidate', {candidate})},
             mediaConstraints: {
                 audio:true,
                 video:true
             }
         };
 
-        let self = this;
         this.webRtcPeer = await  kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options, function(error) {
             this.generateOffer((error, sdpOffer)=>{
                 self.peer.request('joinMeeting', {sdpOffer})
@@ -56,17 +75,11 @@ class App extends Component {
         });
     };
 
-    onIceCandidate(candidate) {
-        this.peer.request('clientIceCandidate', {candidate});
-    }
-
-
-    joinSuccess(sdpAnswer) {
-        console.log("joinSuccess: ", sdpAnswer);
-        this.webRtcPeer.processAnswer(sdpAnswer);
-    }
-
-
+    /**
+     * the following are ui
+     *
+     * @returns {XML}
+     */
     render() {
         return (
             <div className="App">
