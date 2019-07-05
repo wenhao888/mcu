@@ -2,6 +2,7 @@
  *  each peer will have the following data:
  *     {
  *       webRtcEndpoint
+ *       hubPort
  *       iceCandidates
  *     }
  */
@@ -11,6 +12,7 @@ class Room {
         this.id=id;
         this.protooRoom=protooRoom;
         this.mediaPipeline=null;
+        this.Composite=null;
         this.peers = new Map();
     }
 

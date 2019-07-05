@@ -104,9 +104,14 @@ class MessageServer {
      */
     async createMeeting (context, request, accept, reject) {
         let {room} = context;
-        if (!room.mediaPipeline) {
+        if ( ! room.mediaPipeline) {
             room.mediaPipeline = await this.kurentoClient.create('MediaPipeline');
         }
+
+        if ( ! room.composite) {
+            room.composite = await room.mediaPipeline.create( 'Composite');
+        }
+
         accept({});
     }
 
@@ -121,17 +126,23 @@ class MessageServer {
      */
     async joinMeeting(context, request, accept, reject) {
         let {peer, room} = context, sdpOffer= request.data.sdpOffer;
-        let pipeline= room.mediaPipeline, candidates= room.getPeerIceCandidates(peer.id);
+        let pipeline= room.mediaPipeline,
+            composite = room.composite,
+            candidates= room.getPeerIceCandidates(peer.id);
 
         let webRtcEndpoint = await pipeline.create('WebRtcEndpoint');
-        room.patchPeer(peer.id, {webRtcEndpoint});
+        let hubPort = await composite.createHubPort();
+        room.patchPeer(peer.id, {webRtcEndpoint, hubPort});
+
 
         while(candidates.length) {
             let c = candidates.shift();
             webRtcEndpoint.addIceCandidate(c);
         }
 
-        await webRtcEndpoint.connect(webRtcEndpoint);
+        await hubPort.connect(webRtcEndpoint);
+        await webRtcEndpoint.connect(hubPort);
+
         webRtcEndpoint.on('OnIceCandidate', function(event) {
             let c = kurento.getComplexType('IceCandidate')(event.candidate);
             peer.request('serverIceCandidate', {candidate : c});
