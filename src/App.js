@@ -59,7 +59,7 @@ class App extends Component {
         let self = this;
 
         var options = {
-            localVideo: this.localVideo,
+            //localVideo: this.localVideo,
             remoteVideo: this.remoteVideo,
             onicecandidate : (candidate)=> {this.peer.request('clientIceCandidate', {candidate})},
             mediaConstraints: {
